@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35707.178
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bmp581.Sample", "Bmp581.Sample.csproj", "{D71EB000-AD76-421A-BAE5-6DB94A844CEA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bmp581", "..\..\Bmp581\Bmp581.csproj", "{FE0AF779-B725-4CC2-A741-4594C0FC44AB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D71EB000-AD76-421A-BAE5-6DB94A844CEA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D71EB000-AD76-421A-BAE5-6DB94A844CEA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D71EB000-AD76-421A-BAE5-6DB94A844CEA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D71EB000-AD76-421A-BAE5-6DB94A844CEA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE0AF779-B725-4CC2-A741-4594C0FC44AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE0AF779-B725-4CC2-A741-4594C0FC44AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE0AF779-B725-4CC2-A741-4594C0FC44AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE0AF779-B725-4CC2-A741-4594C0FC44AB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
