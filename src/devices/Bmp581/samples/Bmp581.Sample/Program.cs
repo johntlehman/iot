@@ -2,89 +2,80 @@
 using System.Device.I2c;
 using System.Net;
 using Iot.Device.Bmp581;
+using UnitsNet;
 
 Console.WriteLine("=== BMP581 I2C Diagnostic Tool ===");
 Console.WriteLine("Starting scan...\n");
 
 const int busId = 1;
 
-// Try both addresses
-byte[] addressesToTry = { Bmp581.DefaultI2cAddress, Bmp581.SecondaryI2cAddress };
+Console.WriteLine("BMP581 Chip Test Y'all");
 
-I2cDevice? workingDevice = null;
-byte workingAddress = 0;
+I2cConnectionSettings settings = new(busId, Bmp581.DefaultI2cAddress);
+using I2cDevice device = I2cDevice.Create(settings);
 
-foreach (var address in addressesToTry)
+try
 {
-    Console.WriteLine($"Trying I2C address 0x{address:X2}...");
+    Bmp581 sensor = new Bmp581(device);
+    Console.WriteLine("Bmp581 detected!");
+    
+    // Check Oversampling rates
+    var tempOversampling = sensor.GetTempOsr();
+    var pressOversampling = sensor.GetPressOsr();
+    Console.WriteLine($"Temp Oversampling setting is {tempOversampling}, press Oversampling setting is {pressOversampling}");
 
-    try
-    {
-        I2cConnectionSettings i2cSettings = new(busId, address);
-        I2cDevice testDevice = I2cDevice.Create(i2cSettings);
+    // Set Oversampling rate
+    var oversamplingSetting = Bmp581.OversamplingRate.SixteenX;
+    Console.WriteLine($"Updating temp AND press oversampling setting to {oversamplingSetting}");
+    sensor.SetTempOsr(oversamplingSetting);
+    sensor.SetPressOsr(oversamplingSetting);
 
-        // Try to read chip ID register directly
-        testDevice.WriteByte(0x01); // CHIP_ID register
-        byte chipId = testDevice.ReadByte();
+    // Check Oversampling rates again
+    tempOversampling = sensor.GetTempOsr();
+    pressOversampling = sensor.GetPressOsr();
+    Console.WriteLine($"Temp Oversampling setting is {tempOversampling}, press Oversampling setting is {pressOversampling}");
 
-        Console.WriteLine($"  Read value: 0x{chipId:X2} (Expected: 0x50)");
+    // Check Current mode
+    var currentMode = sensor.GetPowerMode();
+    Console.WriteLine($"Power mode is {currentMode}");
 
-        Console.WriteLine("[1] Now for my little test");
-        Bmp581 testBmp581 = new Bmp581(testDevice);
+    // Update power mode to force a measurement
+    sensor.SetPowerMode(Bmp581.PowerMode.Continuous);
 
-        Console.WriteLine($"[2] Results of verifying chip id: {testBmp581.VerifyChipID()}");
-        Console.WriteLine("[3] After verification line");
+    // Check power mode again
+    currentMode = sensor.GetPowerMode();
+    Console.WriteLine($"Power mode is {currentMode.ToString()}");
 
-        if (chipId == 0x50)
-        {
-            Console.WriteLine($"[4] ✓ SUCCESS! Found BMP581 at address 0x{address:X2}");
-            workingDevice = testDevice;
-            workingAddress = address;
-            break;
-        }
-        else if (chipId == 0x80 || chipId == 0xFF || chipId == 0x00)
-        {
-            Console.WriteLine($"  ✗ No device responding (got 0x{chipId:X2})\n");
-            testDevice.Dispose();
-        }
-        else
-        {
-            Console.WriteLine($"  ✗ Wrong device - found chip ID 0x{chipId:X2}\n");
-            testDevice.Dispose();
-        }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"  ✗ Error: {ex.Message}");
-        Console.WriteLine($"  Stack: {ex.StackTrace}\n");
-    }
+    // Check Pressure mode
+    bool presureMode = sensor.PressureEnabled;
+    Console.WriteLine($"Pressure enabled is: {presureMode}, Enabling now");
+
+    // Set Pressure mode
+    sensor.PressureEnabled = true;
+
+    // Check Pressure mode
+    presureMode = sensor.PressureEnabled;
+    Console.WriteLine($"Pressure enabled is: {presureMode}");
+
+    // Wait for measurement
+    Thread.Sleep(50);
+
+    // Read Temperature
+    Temperature temp = sensor.ReadTemperature();
+    Console.WriteLine($"Current Temp is: {temp.DegreesCelsius}C, That's {temp.DegreesFahrenheit}F");
+
+    // Read Pressure
+    Pressure press = sensor.ReadPressure();
+    Console.WriteLine($"Current Pressure is: {press.InchesOfMercury} In Hg. Elevation is: {press.FeetOfElevation} ft");
+
+    // Calculate Altitude
+    Pressure seaLevelPressure = Pressure.FromInchesOfMercury(29.6);
+    Length altitude = sensor.CalculateAltitude(seaLevelPressure);
+    Console.WriteLine($"Current altitude is {altitude.Feet} feet, assuming Sea Level pressure of {seaLevelPressure}");
 }
 
-if (workingDevice != null)
+catch
 {
-    Console.WriteLine($"Using BMP581 at address 0x{workingAddress:X2}");
-    using var bmp581 = new Bmp581(workingDevice);
-    Console.WriteLine("Driver initialized successfully!");
-
-    // Test reading chip ID through driver
-    if (bmp581.VerifyChipID())
-    {
-        Console.WriteLine("✓ Driver verification successful!\n");
-    }
-    else
-    {
-        Console.WriteLine("✗ Driver verification failed!\n");
-    }
+    Console.Write("FAILED to detect BMP581");
 }
-else
-{
-    Console.WriteLine("✗ FAILED: Could not find BMP581 on I2C bus");
-    Console.WriteLine("\nTroubleshooting tips:");
-    Console.WriteLine("1. Check wiring (VCC, GND, SDA, SCL)");
-    Console.WriteLine("2. Verify I2C is enabled: ls /dev/i2c*");
-    Console.WriteLine("3. Check permissions: groups (should include 'i2c')");
-    Console.WriteLine("4. Try the other I2C bus (change busId to 0)");
-}
-
-Console.WriteLine("\nDiagnostic complete.");
 
