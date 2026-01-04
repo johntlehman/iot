@@ -1,7 +1,4 @@
-﻿using System;
-using System.ComponentModel.Design;
-using System.Device.I2c;
-using System.IO;
+﻿using System.Device.I2c;
 using UnitsNet;
 
 namespace Iot.Device.Bmp581
@@ -31,7 +28,7 @@ namespace Iot.Device.Bmp581
             Forced = 0b10,
 
             /// <summary>
-            /// Non-Stop mode - continuous measurements without duty cycling
+            /// Continuous mode - non-stop measurements without duty cycling
             /// </summary>
             Continuous = 0b11
         }
@@ -41,14 +38,14 @@ namespace Iot.Device.Bmp581
         /// </summary>
         public enum OversamplingRate : byte
         {
-            OneX = 0b000,
-            TwoX = 0b001,
-            FourX = 0b010,
-            EightX = 0b011,
-            SixteenX = 0b100,
-            ThirtyTwoX = 0b101,
-            SixtyFourX = 0b110,
-            OneTwentyEightX = 0b111
+            X1 = 0b000,
+            X2 = 0b001,
+            X4 = 0b010,
+            X8 = 0b011,
+            X16 = 0b100,
+            X32 = 0b101,
+            X64 = 0b110,
+            X128 = 0b111
         }
         
         // PROPERTIES
@@ -79,6 +76,13 @@ namespace Iot.Device.Bmp581
                 Write8BitsToRegister((byte)Bmp581Register.OSR_CONFIG, config);
             }
         }
+
+        /// <summary>
+        /// Sea level pressure, used for altitude calculations.
+        /// Defaults to standard atmosphere (1013.25 hPa / 29.92 inHg)
+        /// </summary>
+        public Pressure SeaLevelPressure { get; set; } = Pressure.FromInchesOfMercury(29.92);
+
 
         // === FIELDS ===
         private readonly I2cDevice _i2cDevice;
@@ -189,13 +193,28 @@ namespace Iot.Device.Bmp581
         /// </summary>
         /// <param name="seaLevelPressure">Current sea-level pressure at your location (from weather service)</param>
         /// <returns>Altitude as a length object</returns>
-        public Length CalculateAltitude(Pressure seaLevelPressure)
+        public Length CalculateAltitude()
         {
             Pressure measuredPressure = ReadPressure();
             // Barometric formula: h = 44330 * (1- (P/P0)^0.1903)
-            double altitudeMeters = 44330 * (1.0 - Math.Pow(measuredPressure.Pascals / seaLevelPressure.Pascals, 0.1903));
+            double altitudeMeters = 44330 * (1.0 - Math.Pow(measuredPressure.Pascals / SeaLevelPressure.Pascals, 0.1903));
 
             return Length.FromMeters(altitudeMeters);
+        }
+
+        /// <summary>
+        /// Helper function. Sets current sea level pressure from known altitude
+        /// </summary>
+        public void SetSeaLevelPressureFromAltitude(Length currentAltitude)
+        {
+            Pressure measuredPressure = ReadPressure();
+
+            // Rearranged Barometric formula = P/(1-h/44330)^5.25
+            double ratio = 1 - (currentAltitude.Meters / 44330);
+            double seaLevelPressurePascals = measuredPressure.Pascals / Math.Pow(ratio, 5.25);
+
+            // Set the sea level pressure property
+            SeaLevelPressure = Pressure.FromPascals(seaLevelPressurePascals);
         }
 
         // PRIVATE I2C HELPER FUNCTIONS
@@ -235,7 +254,7 @@ namespace Iot.Device.Bmp581
         // DISPOSE
         public void Dispose() 
         {
-            _i2cDevice.Dispose();
+            _i2cDevice?.Dispose();
         }
 
         // NESTED TYPES

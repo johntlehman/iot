@@ -25,9 +25,10 @@ try
     Console.WriteLine($"Temp Oversampling setting is {tempOversampling}, press Oversampling setting is {pressOversampling}");
 
     // Set Oversampling rate
-    var oversamplingSetting = Bmp581.OversamplingRate.SixteenX;
+    var oversamplingSetting = Bmp581.OversamplingRate.X16;
     Console.WriteLine($"Updating temp AND press oversampling setting to {oversamplingSetting}");
     sensor.SetTempOsr(oversamplingSetting);
+    oversamplingSetting = Bmp581.OversamplingRate.X32;
     sensor.SetPressOsr(oversamplingSetting);
 
     // Check Oversampling rates again
@@ -69,13 +70,22 @@ try
     Console.WriteLine($"Current Pressure is: {press.InchesOfMercury} In Hg. Elevation is: {press.FeetOfElevation} ft");
 
     // Calculate Altitude
-    Pressure seaLevelPressure = Pressure.FromInchesOfMercury(29.6);
-    Length altitude = sensor.CalculateAltitude(seaLevelPressure);
-    Console.WriteLine($"Current altitude is {altitude.Feet} feet, assuming Sea Level pressure of {seaLevelPressure}");
+    //Pressure seaLevelPressure = Pressure.FromInchesOfMercury(29.6);
+    //sensor.SeaLevelPressure = seaLevelPressure;
+
+    var seaLevelPressure = sensor.SeaLevelPressure.InchesOfMercury;
+    Console.WriteLine($"Sensor sea level pressure setting is {seaLevelPressure} inHg");
+
+    var elevation = Length.FromFeet(850);
+    Console.WriteLine($"Updating altimeter setting based on altitude of {elevation.Feet} Feet");
+    sensor.SetSeaLevelPressureFromAltitude(elevation);
+
+    Length altitude = sensor.CalculateAltitude();
+    Console.WriteLine($"Current altitude is {altitude.Feet} feet, assuming Sea Level pressure of {sensor.SeaLevelPressure.InchesOfMercury}");
 }
 
-catch
+catch(Exception ex)
 {
-    Console.Write("FAILED to detect BMP581");
+    Console.Write(ex.Message);
 }
 
